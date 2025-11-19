@@ -259,6 +259,8 @@ class BinarySensor(BinarySensorEntity):
 
         self._interval_enabled = earliest_start <= now <= latest_end
         self._interval_start_time = earliest_start
+        self._interval_enabled = earliest_start <= now <= latest_end
+        self._interval_start_time = earliest_start
 
         # calculate the actual duration (in case a duration entity is configured)
         self._calculate_duration()
@@ -341,9 +343,12 @@ class BinarySensor(BinarySensorEntity):
         if result is None:
             # no interval found, probably because data for next day is missing
             if now < earliest_start:
-                # we are before the start time, o we just say sensor-state=off instead of unavailable # noqa: E501
+                # if we are before the earliest start time, we are sure that the
+                # state is off (and we don't want to wait for the next day data)
                 self._state = False
                 self._intervals = []
+
+            self.async_write_ha_state()
             return
 
         self._state = result["start"] <= now < result["end"]
