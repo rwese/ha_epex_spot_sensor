@@ -251,6 +251,8 @@ class BinarySensor(BinarySensorEntity):
 
         self._interval_enabled = earliest_start <= now <= latest_end
         self._interval_start_time = earliest_start
+        self._interval_enabled = earliest_start <= now <= latest_end
+        self._interval_start_time = earliest_start
 
         # calculate the actual duration (in case a duration entity is configured)
         self._calculate_duration()
