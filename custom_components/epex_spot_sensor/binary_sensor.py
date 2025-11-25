@@ -18,7 +18,6 @@ from homeassistant.helpers import (
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import (
-    EventStateChangedData,
     async_track_state_change_event,
     async_track_time_change,
 )
@@ -163,7 +162,7 @@ class BinarySensor(BinarySensorEntity):
 
         @callback
         def async_update_state(
-            event: Event[EventStateChangedData],
+            event: Event,
         ) -> None:
             """Handle price or duration sensor state changes."""
             self._update_state()
