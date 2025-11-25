@@ -76,6 +76,29 @@ def calc_intervals_for_intermittent(
             # we don't need the full active_duration_in_this_segment
             active_duration_in_this_segment = duration - active_time
 
+            # check if we can connect to an existing interval
+            connects_to_next = False
+            for i in intervals:
+                if i.start_time == interval_end_time:
+                    connects_to_next = True
+                    break
+
+            connects_to_prev = False
+            for i in intervals:
+                if i.end_time == interval_start_time:
+                    connects_to_prev = True
+                    break
+
+            if connects_to_next and not connects_to_prev:
+                # align to end
+                interval_start_time = interval_end_time - active_duration_in_this_segment
+            else:
+                # align to start
+                interval_end_time = interval_start_time + active_duration_in_this_segment
+        else:
+            # take full segment
+            pass
+
         price = (
             mp.price
             * active_duration_in_this_segment.total_seconds()
