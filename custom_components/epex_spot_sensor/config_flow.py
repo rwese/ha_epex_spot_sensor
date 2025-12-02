@@ -1,4 +1,5 @@
 """Config flow for EPEX Spot Sensor component."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -24,6 +25,8 @@ from .const import (
     CONF_PRICE_MODE,
     CONF_DURATION,
     CONF_DURATION_ENTITY_ID,
+    CONF_PRICE_TOLERANCE,
+    DEFAULT_PRICE_TOLERANCE,
     DOMAIN,
 )
 
@@ -53,6 +56,17 @@ OPTIONS_SCHEMA = vol.Schema(
                 mode=selector.SelectSelectorMode.LIST,
                 options=[e.value for e in IntervalModes],
             )
+        ),
+        vol.Optional(
+            CONF_PRICE_TOLERANCE, default=DEFAULT_PRICE_TOLERANCE
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                mode=selector.NumberSelectorMode.BOX,
+                min=0,
+                max=100,
+                step=1,
+                unit_of_measurement="%",
+            ),
         ),
         #        vol.Required(
         #            CONF_HYSTERESIS, default=DEFAULT_HYSTERESIS

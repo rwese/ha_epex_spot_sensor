@@ -1,4 +1,5 @@
 """Constants for the EPEX Spot Sensor integration."""
+
 from enum import Enum
 
 DOMAIN = "epex_spot_sensor"
@@ -10,6 +11,9 @@ CONF_DURATION_ENTITY_ID = "duration_entity_id"
 CONF_INTERVAL_START_TIME = "interval_start_time"
 
 CONF_INTERVAL_MODE = "interval_mode"
+
+CONF_PRICE_TOLERANCE = "price_tolerance"
+DEFAULT_PRICE_TOLERANCE = 0.0
 
 
 class IntervalModes(Enum):
