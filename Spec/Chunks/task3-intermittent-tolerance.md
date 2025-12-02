@@ -1,16 +1,19 @@
 # Task 3: Implement Price Tolerance in Intermittent Mode
 
 ## Objective
+
 Modify `intermittent_interval.py` to support price tolerance parameter.
 
 ## Algorithm Overview
 
 Current behavior:
+
 1. Filter market data to time window
 2. Sort by price (ascending for cheapest, descending for most expensive)
 3. Greedily select slots in strict price order until duration met
 
 New behavior with tolerance:
+
 1. Filter market data to time window
 2. Sort by price
 3. Find reference price (cheapest/most expensive slot)
@@ -28,6 +31,7 @@ New behavior with tolerance:
 ### Step 1: Add tolerance parameter
 
 Modify function signature:
+
 ```python
 def calc_intervals_for_intermittent(
     marketdata,
@@ -42,6 +46,7 @@ def calc_intervals_for_intermittent(
 ### Step 2: Implement tolerance logic
 
 After filtering and sorting market data:
+
 ```python
 def calc_intervals_for_intermittent(
     marketdata,
@@ -67,12 +72,12 @@ def calc_intervals_for_intermittent(
 
     # sort by price
     marketdata.sort(key=lambda e: e.price, reverse=most_expensive)
-    
+
     # NEW: If tolerance > 0, filter by price threshold
     if price_tolerance_percent > 0.0:
         # Reference price is the first element (cheapest or most expensive)
         reference_price = marketdata[0].price
-        
+
         # Calculate threshold
         if most_expensive:
             threshold = reference_price * (1 - price_tolerance_percent / 100)
@@ -80,21 +85,21 @@ def calc_intervals_for_intermittent(
         else:
             threshold = reference_price * (1 + price_tolerance_percent / 100)
             acceptable_slots = [e for e in marketdata if e.price <= threshold]
-        
+
         # Sort acceptable slots by start time (prefer earlier)
         acceptable_slots.sort(key=lambda e: e.start_time)
-        
+
         # Try to satisfy duration with acceptable slots
         test_intervals = _select_intervals_from_slots(
             acceptable_slots, earliest_start, latest_end, duration
         )
-        
+
         # Check if we satisfied the duration
         total_duration = sum(
-            (i.end_time - i.start_time).total_seconds() 
+            (i.end_time - i.start_time).total_seconds()
             for i in test_intervals
         )
-        
+
         if total_duration >= duration.total_seconds():
             # Success with tolerance
             return test_intervals
@@ -106,7 +111,7 @@ def calc_intervals_for_intermittent(
                 price_tolerance_percent
             )
             # Continue with original marketdata (sorted by price)
-    
+
     # Original algorithm (or fallback)
     return _select_intervals_from_slots(
         marketdata, earliest_start, latest_end, duration
@@ -194,6 +199,7 @@ def _select_intervals_from_slots(slots, earliest_start, latest_end, duration):
 ## Testing Requirements
 
 Create `tests/test_price_tolerance_intermittent.py` with:
+
 - Test tolerance=0 matches current behavior
 - Test tolerance=10%, 20%, 50%
 - Test "prefer earlier" when multiple options

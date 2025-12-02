@@ -19,6 +19,7 @@ from homeassistant.helpers.schema_config_entry_flow import (
 from .const import (
     PriceModes,
     IntervalModes,
+    DurationModes,
     CONF_EARLIEST_START_TIME,
     CONF_LATEST_END_TIME,
     CONF_INTERVAL_MODE,
@@ -27,6 +28,8 @@ from .const import (
     CONF_DURATION_ENTITY_ID,
     CONF_PRICE_TOLERANCE,
     DEFAULT_PRICE_TOLERANCE,
+    CONF_DURATION_MODE,
+    CONF_MIN_DURATION,
     DOMAIN,
 )
 
@@ -35,6 +38,15 @@ OPTIONS_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_EARLIEST_START_TIME): selector.TimeSelector(),
         vol.Required(CONF_LATEST_END_TIME): selector.TimeSelector(),
+        vol.Required(
+            CONF_DURATION_MODE, default=DurationModes.EXACT
+        ): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                translation_key=CONF_DURATION_MODE,
+                mode=selector.SelectSelectorMode.LIST,
+                options=[e.value for e in DurationModes],
+            )
+        ),
         vol.Required(CONF_DURATION, default={"hours": 1}): selector.DurationSelector(),
         vol.Optional(CONF_DURATION_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=[INPUT_NUMBER_DOMAIN, SENSOR_DOMAIN])
@@ -89,16 +101,94 @@ CONFIG_SCHEMA = vol.Schema(
 
 CONFIG_FLOW = {"user": SchemaFlowFormStep(CONFIG_SCHEMA)}
 
-OPTIONS_FLOW = {"init": SchemaFlowFormStep(OPTIONS_SCHEMA)}
-
 
 class ConfigFlowHandler(SchemaConfigFlowHandler, domain=DOMAIN):
     """Handle a config or options flow for Threshold."""
 
     config_flow = CONFIG_FLOW
-    options_flow = OPTIONS_FLOW
+
+    def async_get_options_flow(self, config_entry):
+        """Return options flow for this handler."""
+        return OptionsFlowHandler(config_entry)
 
     def async_config_entry_title(self, options: Mapping[str, Any]) -> str:
         """Return config entry title."""
         name: str = options[CONF_NAME]
         return name
+
+
+class OptionsFlowHandler(SchemaConfigFlowHandler, domain=DOMAIN):
+    """Handle options flow with conditional fields."""
+
+    @staticmethod
+    def async_get_options_flow_config_schema(options: dict[str, Any]) -> vol.Schema:
+        """Return schema with conditional fields."""
+        duration_mode = options.get(CONF_DURATION_MODE, DurationModes.EXACT.value)
+
+        base_schema = vol.Schema(
+            {
+                vol.Required(CONF_EARLIEST_START_TIME): selector.TimeSelector(),
+                vol.Required(CONF_LATEST_END_TIME): selector.TimeSelector(),
+                vol.Required(
+                    CONF_DURATION_MODE, default=duration_mode
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        translation_key=CONF_DURATION_MODE,
+                        mode=selector.SelectSelectorMode.LIST,
+                        options=[e.value for e in DurationModes],
+                    )
+                ),
+                vol.Required(
+                    CONF_DURATION, default={"hours": 1}
+                ): selector.DurationSelector(),
+                vol.Optional(CONF_DURATION_ENTITY_ID): selector.EntitySelector(
+                    selector.EntitySelectorConfig(
+                        domain=[INPUT_NUMBER_DOMAIN, SENSOR_DOMAIN]
+                    )
+                ),
+                vol.Required(
+                    CONF_PRICE_MODE, default=PriceModes.CHEAPEST
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        translation_key=CONF_PRICE_MODE,
+                        mode=selector.SelectSelectorMode.LIST,
+                        options=[e.value for e in PriceModes],
+                    )
+                ),
+                vol.Required(
+                    CONF_INTERVAL_MODE, default=IntervalModes.INTERMITTENT
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        translation_key=CONF_INTERVAL_MODE,
+                        mode=selector.SelectSelectorMode.LIST,
+                        options=[e.value for e in IntervalModes],
+                    )
+                ),
+                vol.Optional(
+                    CONF_PRICE_TOLERANCE, default=DEFAULT_PRICE_TOLERANCE
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        mode=selector.NumberSelectorMode.BOX,
+                        min=0,
+                        max=100,
+                        step=1,
+                        unit_of_measurement="%",
+                    ),
+                ),
+            }
+        )
+
+        if duration_mode == DurationModes.FLEXIBLE.value:
+            base_schema = base_schema.extend(
+                {
+                    vol.Optional(CONF_MIN_DURATION): selector.DurationSelector(),
+                }
+            )
+
+        return base_schema
+
+    config_flow = [SchemaFlowFormStep(async_get_options_flow_config_schema)]
+
+    async def async_config_entry_title(self, options):
+        """Return config entry title."""
+        return options.get(CONF_NAME, "EPEX Spot Sensor")

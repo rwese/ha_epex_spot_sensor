@@ -7,22 +7,27 @@ This directory contains detailed specifications for planned features and enhance
 ## Active Specifications
 
 ### ✅ Flexible Duration with Price Tolerance
+
 **Status:** Ready for Implementation  
 **Files:**
+
 - `flexible-duration-with-price-tolerance.md` - Complete feature specification
 - `DECISIONS-flexible-duration-with-price-tolerance.md` - Finalized design decisions
 
 **Summary:**
 Add two complementary features to provide flexible scheduling:
+
 1. **Flexible Duration:** Find optimal intervals "up to X hours" (between min and max duration)
 2. **Price Tolerance:** Accept time slots within ±X% of the cheapest price
 
 **Implementation Phases:**
+
 - **Phase 1:** Price Tolerance (2-3 weeks) - Simpler, lower risk
 - **Phase 2:** Flexible Duration (3-4 weeks) - More complex
 - **Phase 3:** Polish & Optimization (1 week)
 
 **Key Decisions:**
+
 - Price tolerance relative to cheapest slot (not average)
 - Stop adding intervals when price exceeds threshold
 - Prefer earlier start times when multiple options exist
@@ -33,6 +38,7 @@ Add two complementary features to provide flexible scheduling:
 - Performance not a concern due to small data sets
 
 **Next Steps:**
+
 1. Review specifications
 2. Begin Phase 1 implementation (Price Tolerance)
 3. Create implementation branch
@@ -46,12 +52,14 @@ Add two complementary features to provide flexible scheduling:
 ### For Developers
 
 1. **Read the main specification** (`flexible-duration-with-price-tolerance.md`)
+
    - Understand current behavior
    - Review proposed features
    - Study algorithm pseudocode
    - Check testing requirements
 
 2. **Review design decisions** (`DECISIONS-flexible-duration-with-price-tolerance.md`)
+
    - Understand rationale for each choice
    - See configuration examples
    - Review testing strategy
@@ -65,12 +73,14 @@ Add two complementary features to provide flexible scheduling:
 ### For Reviewers
 
 1. **Verify completeness**
+
    - All open questions answered
    - Edge cases considered
    - Testing strategy defined
    - Documentation planned
 
 2. **Check feasibility**
+
    - Technical approach sound
    - Performance acceptable
    - Backward compatibility maintained
@@ -88,39 +98,48 @@ Add two complementary features to provide flexible scheduling:
 When creating new backlog items, include:
 
 1. **Header**
+
    - Status, Priority, Type, Component, Dates
 
 2. **Summary**
+
    - Brief overview of the feature
 
 3. **Current Behavior**
+
    - What exists today
    - Code locations
    - Limitations
 
 4. **Proposed Behavior**
+
    - Detailed feature description
    - Use cases
    - Examples
 
 5. **Technical Implementation**
+
    - Configuration changes
    - Algorithm changes
    - Backward compatibility
    - Testing requirements
 
 6. **Design Decisions**
+
    - Open questions
    - Options considered
    - Final decisions with rationale
 
 7. **Dependencies**
+
    - Internal and external
 
 8. **Success Criteria**
+
    - Definition of done
 
 9. **Risks & Mitigations**
+
    - Identified risks
    - Mitigation strategies
 
