@@ -12,6 +12,9 @@ CONF_INTERVAL_START_TIME = "interval_start_time"
 
 CONF_INTERVAL_MODE = "interval_mode"
 
+CONF_PRICE_TOLERANCE = "price_tolerance"
+DEFAULT_PRICE_TOLERANCE = 0.0
+
 
 class IntervalModes(Enum):
     """Work modes for config validation."""
