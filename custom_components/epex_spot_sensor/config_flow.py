@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import timedelta
 from typing import Any
 
 import voluptuous as vol
@@ -181,11 +182,29 @@ class OptionsFlowHandler(SchemaConfigFlowHandler, domain=DOMAIN):
         if duration_mode == DurationModes.FLEXIBLE.value:
             base_schema = base_schema.extend(
                 {
-                    vol.Optional(CONF_MIN_DURATION): selector.DurationSelector(),
+                    vol.Required(CONF_MIN_DURATION): selector.DurationSelector(),
                 }
             )
 
-        return base_schema
+        schema_dict = base_schema.schema
+
+        def validate_options(data):
+            duration_mode_val = data.get(CONF_DURATION_MODE)
+            if duration_mode_val == DurationModes.FLEXIBLE.value:
+                if CONF_MIN_DURATION in data:
+                    min_dur_dict = data[CONF_MIN_DURATION]
+                    dur_dict = data[CONF_DURATION]
+                    min_dur = timedelta(**min_dur_dict)
+                    dur = timedelta(**dur_dict)
+                    if min_dur <= timedelta(0):
+                        raise vol.Invalid("min_duration must be greater than 0")
+                    if min_dur > dur:
+                        raise vol.Invalid(
+                            "min_duration must be less than or equal to duration"
+                        )
+            return data
+
+        return vol.All(base_schema, validate_options)
 
     config_flow = [SchemaFlowFormStep(async_get_options_flow_config_schema)]
 
