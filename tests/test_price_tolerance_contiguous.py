@@ -1,7 +1,6 @@
 """Tests for price tolerance in contiguous mode."""
 
 from datetime import datetime, timedelta, timezone
-import pytest
 from custom_components.epex_spot_sensor.contiguous_interval import (
     calc_interval_for_contiguous,
 )

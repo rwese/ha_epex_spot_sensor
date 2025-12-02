@@ -38,6 +38,8 @@ from .const import (
     CONF_INTERVAL_START_TIME,
     CONF_LATEST_END_TIME,
     CONF_PRICE_MODE,
+    CONF_PRICE_TOLERANCE,
+    DEFAULT_PRICE_TOLERANCE,
     IntervalModes,
     PriceModes,
 )
@@ -109,6 +111,9 @@ async def async_setup_entry(
                 duration_entity_id=config_entry.options.get(CONF_DURATION_ENTITY_ID),
                 interval_mode=config_entry.options[CONF_INTERVAL_MODE],
                 price_mode=config_entry.options[CONF_PRICE_MODE],
+                price_tolerance=config_entry.options.get(
+                    CONF_PRICE_TOLERANCE, DEFAULT_PRICE_TOLERANCE
+                ),
                 device_info=device_info,
             )
         ]
@@ -132,6 +137,7 @@ class BinarySensor(BinarySensorEntity):
         duration_entity_id: str | None,
         interval_mode: str,
         price_mode: str,
+        price_tolerance: float,
         device_info: DeviceInfo | None = None,
     ) -> None:
         """Initialize the EPEX Spot binary sensor."""
@@ -148,6 +154,7 @@ class BinarySensor(BinarySensorEntity):
         self._duration_entity_id = duration_entity_id
         self._price_mode = price_mode
         self._interval_mode = interval_mode
+        self._price_tolerance = price_tolerance
 
         # price sensor values
         self._sensor_attributes = None
@@ -280,6 +287,7 @@ class BinarySensor(BinarySensorEntity):
             latest_end=latest_end,
             duration=self._duration,
             most_expensive=self._price_mode == PriceModes.MOST_EXPENSIVE.value,
+            price_tolerance_percent=self._price_tolerance,
         )
 
         if intervals is None:
@@ -304,6 +312,7 @@ class BinarySensor(BinarySensorEntity):
                 latest_end=latest_end,
                 duration=self._duration,
                 most_expensive=self._price_mode == PriceModes.MOST_EXPENSIVE.value,
+                price_tolerance_percent=self._price_tolerance,
             )
 
             if intervals2 is not None:
@@ -330,6 +339,7 @@ class BinarySensor(BinarySensorEntity):
             latest_end=latest_end,
             duration=self._duration,
             most_expensive=self._price_mode == PriceModes.MOST_EXPENSIVE.value,
+            price_tolerance_percent=self._price_tolerance,
         )
 
         if result is None:
@@ -358,6 +368,7 @@ class BinarySensor(BinarySensorEntity):
                 latest_end=latest_end,
                 duration=self._duration,
                 most_expensive=self._price_mode == PriceModes.MOST_EXPENSIVE.value,
+                price_tolerance_percent=self._price_tolerance,
             )
 
             if result is None:

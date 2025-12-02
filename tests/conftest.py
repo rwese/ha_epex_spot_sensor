@@ -1,6 +1,6 @@
 """Global fixtures for EPEX Spot Sensor integration tests."""
+
 import pytest
-from unittest.mock import patch
 
 pytest_plugins = "pytest_homeassistant_custom_component"
 
