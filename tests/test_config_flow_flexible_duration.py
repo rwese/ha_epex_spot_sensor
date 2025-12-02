@@ -7,7 +7,6 @@ from custom_components.epex_spot_sensor.const import (
     CONF_DURATION_MODE,
     CONF_MIN_DURATION,
     CONF_PRICE_TOLERANCE,
-    DEFAULT_PRICE_TOLERANCE,
 )
 
 
@@ -20,7 +19,8 @@ class TestFlexibleDurationConfig:
         schema = config_flow.OptionsFlowHandler.async_get_options_flow_config_schema({})
 
         # Check that duration_mode field exists
-        assert CONF_DURATION_MODE in schema.schema
+        schema_dict = schema.validators[0].schema
+        assert CONF_DURATION_MODE in schema_dict
 
     def test_min_duration_field_exists_when_flexible(self):
         """Test that min_duration field exists when duration_mode is flexible."""
@@ -30,7 +30,8 @@ class TestFlexibleDurationConfig:
         )
 
         # Check that min_duration field exists
-        assert CONF_MIN_DURATION in schema.schema
+        schema_dict = schema.validators[0].schema
+        assert CONF_MIN_DURATION in schema_dict
 
     def test_min_duration_field_not_exists_when_exact(self):
         """Test that min_duration field does not exist when duration_mode is exact."""
@@ -40,7 +41,8 @@ class TestFlexibleDurationConfig:
         )
 
         # Check that min_duration field does not exist
-        assert CONF_MIN_DURATION not in schema.schema
+        schema_dict = schema.validators[0].schema
+        assert CONF_MIN_DURATION not in schema_dict
 
     def test_price_tolerance_field_exists(self):
         """Test that price_tolerance field exists (Phase 1 - should pass)."""
@@ -69,7 +71,7 @@ class TestFlexibleDurationConfig:
         assert result is not None
 
     def test_config_validation_with_flexible_mode(self):
-        """Test that config validation works with flexible mode including min_duration."""
+        """Test config validation with flexible mode including min_duration."""
         schema = config_flow.OptionsFlowHandler.async_get_options_flow_config_schema(
             {CONF_DURATION_MODE: "flexible"}
         )
@@ -151,3 +153,46 @@ class TestFlexibleDurationConfig:
 
         result = schema(config_data)
         assert result is not None
+
+    def test_min_duration_is_required_in_flexible_mode(self):
+        """Test min_duration is required (vol.Required) in flexible mode."""
+        schema = config_flow.OptionsFlowHandler.async_get_options_flow_config_schema(
+            {CONF_DURATION_MODE: "flexible"}
+        )
+
+        # Get the underlying schema dict
+        schema_dict = schema.validators[0].schema
+
+        # Find the key for min_duration
+        min_duration_key = None
+        for k in schema_dict.keys():
+            if str(k) == CONF_MIN_DURATION:
+                min_duration_key = k
+                break
+
+        # Check that min_duration is in the schema
+        assert min_duration_key is not None
+
+        # Check that it is vol.Required, not vol.Optional
+        assert isinstance(min_duration_key, vol.Required)
+
+    def test_validation_fails_without_min_duration_in_flexible_mode(self):
+        """Test validation fails if min_duration missing in flexible mode."""
+        schema = config_flow.OptionsFlowHandler.async_get_options_flow_config_schema(
+            {CONF_DURATION_MODE: "flexible"}
+        )
+
+        # Config data without min_duration
+        config_data = {
+            "earliest_start_time": "22:00:00",
+            "latest_end_time": "06:00:00",
+            "duration_mode": "flexible",
+            "duration": {"hours": 4},
+            "price_mode": "cheapest",
+            "interval_mode": "intermittent",
+            "price_tolerance": 15,
+        }
+
+        # This should raise vol.Invalid because min_duration is required
+        with pytest.raises(vol.Invalid):
+            schema(config_data)
