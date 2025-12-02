@@ -31,12 +31,15 @@ from .const import (
     ATTR_PRICE_PER_KWH,
     ATTR_RANK,
     ATTR_START_TIME,
+    DurationModes,
     CONF_DURATION,
     CONF_DURATION_ENTITY_ID,
+    CONF_DURATION_MODE,
     CONF_EARLIEST_START_TIME,
     CONF_INTERVAL_MODE,
     CONF_INTERVAL_START_TIME,
     CONF_LATEST_END_TIME,
+    CONF_MIN_DURATION,
     CONF_PRICE_MODE,
     CONF_PRICE_TOLERANCE,
     DEFAULT_PRICE_TOLERANCE,
@@ -114,6 +117,10 @@ async def async_setup_entry(
                 price_tolerance=config_entry.options.get(
                     CONF_PRICE_TOLERANCE, DEFAULT_PRICE_TOLERANCE
                 ),
+                duration_mode=config_entry.options.get(
+                    CONF_DURATION_MODE, DurationModes.EXACT
+                ),
+                min_duration=config_entry.options.get(CONF_MIN_DURATION),
                 device_info=device_info,
             )
         ]
@@ -138,6 +145,8 @@ class BinarySensor(BinarySensorEntity):
         interval_mode: str,
         price_mode: str,
         price_tolerance: float,
+        duration_mode: str,
+        min_duration: timedelta | None,
         device_info: DeviceInfo | None = None,
     ) -> None:
         """Initialize the EPEX Spot binary sensor."""
@@ -155,6 +164,8 @@ class BinarySensor(BinarySensorEntity):
         self._price_mode = price_mode
         self._interval_mode = interval_mode
         self._price_tolerance = price_tolerance
+        self._duration_mode = duration_mode
+        self._min_duration = min_duration
 
         # price sensor values
         self._sensor_attributes = None
@@ -288,6 +299,9 @@ class BinarySensor(BinarySensorEntity):
             duration=self._duration,
             most_expensive=self._price_mode == PriceModes.MOST_EXPENSIVE.value,
             price_tolerance_percent=self._price_tolerance,
+            min_duration=self._min_duration
+            if self._duration_mode == DurationModes.FLEXIBLE.value
+            else None,
         )
 
         if intervals is None:
@@ -313,6 +327,9 @@ class BinarySensor(BinarySensorEntity):
                 duration=self._duration,
                 most_expensive=self._price_mode == PriceModes.MOST_EXPENSIVE.value,
                 price_tolerance_percent=self._price_tolerance,
+                min_duration=self._min_duration
+                if self._duration_mode == DurationModes.FLEXIBLE.value
+                else None,
             )
 
             if intervals2 is not None:
@@ -340,6 +357,9 @@ class BinarySensor(BinarySensorEntity):
             duration=self._duration,
             most_expensive=self._price_mode == PriceModes.MOST_EXPENSIVE.value,
             price_tolerance_percent=self._price_tolerance,
+            min_duration=self._min_duration
+            if self._duration_mode == DurationModes.FLEXIBLE.value
+            else None,
         )
 
         if result is None:
@@ -369,6 +389,9 @@ class BinarySensor(BinarySensorEntity):
                 duration=self._duration,
                 most_expensive=self._price_mode == PriceModes.MOST_EXPENSIVE.value,
                 price_tolerance_percent=self._price_tolerance,
+                min_duration=self._min_duration
+                if self._duration_mode == DurationModes.FLEXIBLE.value
+                else None,
             )
 
             if result is None:
@@ -414,9 +437,14 @@ class BinarySensor(BinarySensorEntity):
 
     def _calculate_duration(self):
         self._duration = self._default_duration
+        self._min_duration = None  # Reset flexible settings
 
         if self._duration_entity_id is None:
             return
+
+        # When entity is active, force exact mode
+        self._duration_mode = DurationModes.EXACT.value
+        self._min_duration = None
 
         duration_entity_state = self._hass.states.get(self._duration_entity_id)
         if duration_entity_state is None:
