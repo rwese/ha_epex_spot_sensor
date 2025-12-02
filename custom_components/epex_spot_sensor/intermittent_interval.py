@@ -1,5 +1,8 @@
+import logging
 from datetime import datetime, timedelta
 
+
+_LOGGER = logging.getLogger(__name__)
 
 SECONDS_PER_HOUR = 60 * 60
 
@@ -43,6 +46,7 @@ def calc_intervals_for_intermittent(
     latest_end: datetime,
     duration: timedelta,
     most_expensive: bool = False,
+    price_tolerance_percent: float = 0.0,
 ):
     """Calculate price for given start time and duration."""
     if len(marketdata) == 0:
@@ -61,10 +65,56 @@ def calc_intervals_for_intermittent(
     # sort by price
     marketdata.sort(key=lambda e: e.price, reverse=most_expensive)
 
+    # If tolerance > 0, filter by price threshold
+    if price_tolerance_percent > 0.0:
+        # Reference price is the first element (cheapest or most expensive)
+        reference_price = marketdata[0].price
+
+        # Calculate threshold
+        if most_expensive:
+            threshold = reference_price * (1 - price_tolerance_percent / 100)
+            acceptable_slots = [e for e in marketdata if e.price >= threshold]
+        else:
+            threshold = reference_price * (1 + price_tolerance_percent / 100)
+            acceptable_slots = [e for e in marketdata if e.price <= threshold]
+
+        # Sort acceptable slots by start time (prefer earlier)
+        acceptable_slots.sort(key=lambda e: e.start_time)
+
+        # Try to satisfy duration with acceptable slots
+        test_intervals = _select_intervals_from_slots(
+            acceptable_slots, earliest_start, latest_end, duration
+        )
+
+        # Check if we satisfied the duration
+        total_duration = sum(
+            (i.end_time - i.start_time).total_seconds() for i in test_intervals
+        )
+
+        if total_duration >= duration.total_seconds():
+            # Success with tolerance
+            return test_intervals
+        else:
+            # Fall back to strict ordering
+            _LOGGER.warning(
+                "Insufficient slots within price tolerance (%.1f%%), "
+                "falling back to strict price ordering",
+                price_tolerance_percent,
+            )
+            # Continue with original marketdata (sorted by price)
+
+    # Original algorithm (or fallback)
+    return _select_intervals_from_slots(
+        marketdata, earliest_start, latest_end, duration
+    )
+
+
+def _select_intervals_from_slots(slots, earliest_start, latest_end, duration):
+    """Helper function to select intervals from given slots."""
     active_time: timedelta = timedelta(seconds=0)
     intervals = []
 
-    for count, mp in enumerate(marketdata):
+    for count, mp in enumerate(slots):
         interval_start_time = (
             earliest_start if mp.start_time < earliest_start else mp.start_time
         )
@@ -91,10 +141,14 @@ def calc_intervals_for_intermittent(
 
             if connects_to_next and not connects_to_prev:
                 # align to end
-                interval_start_time = interval_end_time - active_duration_in_this_segment
+                interval_start_time = (
+                    interval_end_time - active_duration_in_this_segment
+                )
             else:
                 # align to start
-                interval_end_time = interval_start_time + active_duration_in_this_segment
+                interval_end_time = (
+                    interval_start_time + active_duration_in_this_segment
+                )
         else:
             # take full segment
             pass
