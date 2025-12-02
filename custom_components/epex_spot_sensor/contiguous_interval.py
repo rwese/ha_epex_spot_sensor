@@ -72,12 +72,26 @@ def _calc_start_times(
 
 
 def _find_extreme_price_interval(
-    marketdata, start_times, duration: timedelta, most_expensive: bool = False
+    marketdata,
+    start_times,
+    duration: timedelta,
+    most_expensive: bool = False,
+    price_tolerance_percent: float = 0.0,
 ):
     """Find the lowest/highest price for all given start times.
 
         The argument cmp is a lambda which is used to differentiate between
     lowest and highest price.
+
+    Args:
+        marketdata: Market price data
+        start_times: List of candidate start times
+        duration: Duration of the interval
+        most_expensive: If True, find most expensive; otherwise find cheapest
+        price_tolerance_percent: Price tolerance percentage (0.0 = no tolerance)
+
+    Returns:
+        Dict with start, end, interval_price, price_per_hour, or None if no valid interval
     """
     interval_price: float | None = None
     interval_start_time: timedelta | None = None
@@ -92,6 +106,7 @@ def _find_extreme_price_interval(
         def cmp(a, b):
             return a < b
 
+    # Find optimal interval (cheapest or most expensive)
     for start in start_times:
         price = _calc_interval_price(marketdata, start, duration)
         if price is None:
@@ -103,15 +118,69 @@ def _find_extreme_price_interval(
             interval_price = price
             interval_start_time = start
 
-    if interval_start_time is None:
+    if interval_start_time is None or interval_price is None:
         return None
 
-    return {
+    # Build optimal result
+    optimal_result = {
         "start": interval_start_time,
         "end": interval_start_time + duration,
         "interval_price": interval_price,
         "price_per_hour": interval_price * SECONDS_PER_HOUR / duration.total_seconds(),
     }
+
+    # If tolerance is 0, return optimal (backward compatibility)
+    if price_tolerance_percent == 0.0:
+        return optimal_result
+
+    # Calculate price threshold based on optimal price
+    price_per_hour = optimal_result["price_per_hour"]
+
+    if most_expensive:
+        # For most expensive mode, threshold is lower bound
+        threshold = price_per_hour * (1 - price_tolerance_percent / 100)
+
+        def within_threshold(price):
+            return price >= threshold
+
+    else:
+        # For cheapest mode, threshold is upper bound
+        threshold = price_per_hour * (1 + price_tolerance_percent / 100)
+
+        def within_threshold(price):
+            return price <= threshold
+
+    # Find all intervals within threshold
+    candidates = []
+    for start in start_times:
+        price = _calc_interval_price(marketdata, start, duration)
+        if price is None:
+            continue
+
+        price_per_hour_candidate = price * SECONDS_PER_HOUR / duration.total_seconds()
+
+        if within_threshold(price_per_hour_candidate):
+            candidates.append(
+                {
+                    "start": start,
+                    "end": start + duration,
+                    "interval_price": price,
+                    "price_per_hour": price_per_hour_candidate,
+                }
+            )
+
+    # If no candidates within threshold, fall back to optimal
+    if len(candidates) == 0:
+        _LOGGER.warning(
+            "No intervals found within price tolerance (%.1f%%), "
+            "using optimal interval",
+            price_tolerance_percent,
+        )
+        return optimal_result
+
+    # Prefer earliest start time (Decision 3)
+    candidates.sort(key=lambda x: x["start"])
+    return candidates[0]
 
 
 def calc_interval_for_contiguous(
@@ -120,6 +189,7 @@ def calc_interval_for_contiguous(
     latest_end: datetime,
     duration: timedelta,
     most_expensive: bool = True,
+    price_tolerance_percent: float = 0.0,
 ):
     if len(marketdata) == 0:
         return None
@@ -133,9 +203,9 @@ def calc_interval_for_contiguous(
         latest_end=latest_end,
         duration=duration,
     )
-    
+
     start_times = sorted(list(set(start_times)))
 
     return _find_extreme_price_interval(
-        marketdata, start_times, duration, most_expensive
+        marketdata, start_times, duration, most_expensive, price_tolerance_percent
     )
