@@ -21,16 +21,19 @@ Add support for flexible duration scheduling that allows the system to find opti
 The EPEX Spot Sensor currently operates with rigid duration requirements:
 
 ### Duration Handling
+
 - **Fixed Duration:** The system always finds intervals that sum to **exactly** the configured duration
 - **No Flexibility:** Both contiguous and intermittent modes require the full duration to be scheduled
 - **All-or-Nothing:** If insufficient market data exists to satisfy the full duration, the sensor becomes unavailable
 
 ### Price Selection
+
 - **Exact Cheapest:** The algorithm finds the absolute cheapest (or most expensive) time slots
 - **No Tolerance:** All selected intervals are strictly ordered by price, with no flexibility
 - **Greedy Selection:** In intermittent mode, slots are selected in strict price order until duration is met
 
 ### Code Locations
+
 - **Contiguous:** `contiguous_interval.py:117-141` - `calc_interval_for_contiguous()`
 - **Intermittent:** `intermittent_interval.py:40-122` - `calc_intervals_for_intermittent()`
 - **Configuration:** `config_flow.py:31-64` - `OPTIONS_SCHEMA`
@@ -48,6 +51,7 @@ Allow users to configure a **maximum duration** with a **minimum duration** thre
 Add new configuration parameters:
 
 1. **Duration Mode** (new enum)
+
    - `EXACT` (default, current behavior)
    - `FLEXIBLE` (new mode)
 
@@ -60,6 +64,7 @@ Add new configuration parameters:
 #### Algorithm Changes
 
 **For Contiguous Mode:**
+
 ```python
 # Current: Find single interval with exact duration
 # Proposed: Find best interval between min_duration and max_duration
@@ -74,7 +79,7 @@ def calc_interval_for_contiguous_flexible(
 ):
     """
     Find the optimal contiguous interval between min and max duration.
-    
+
     Strategy:
     1. Generate candidate start times (same as current)
     2. For each start time, evaluate all durations from min to max
@@ -86,6 +91,7 @@ def calc_interval_for_contiguous_flexible(
 ```
 
 **For Intermittent Mode:**
+
 ```python
 # Current: Select intervals until exact duration is reached
 # Proposed: Select intervals until min_duration reached, continue up to max_duration if beneficial
@@ -100,7 +106,7 @@ def calc_intervals_for_intermittent_flexible(
 ):
     """
     Find optimal intermittent intervals between min and max duration.
-    
+
     Strategy:
     1. Sort market data by price (same as current)
     2. Select intervals until min_duration is satisfied
@@ -136,14 +142,15 @@ Add new configuration parameter:
 #### Algorithm Changes
 
 **Price Threshold Calculation:**
+
 ```python
 def calculate_price_threshold(optimal_price: float, tolerance_percent: float, most_expensive: bool):
     """
     Calculate acceptable price range based on optimal price and tolerance.
-    
+
     For cheapest mode:
         max_acceptable_price = optimal_price * (1 + tolerance_percent / 100)
-    
+
     For most expensive mode:
         min_acceptable_price = optimal_price * (1 - tolerance_percent / 100)
     """
@@ -151,6 +158,7 @@ def calculate_price_threshold(optimal_price: float, tolerance_percent: float, mo
 ```
 
 **For Contiguous Mode:**
+
 ```python
 # Modify: _find_extreme_price_interval()
 # After finding optimal interval, also consider intervals within tolerance
@@ -165,7 +173,7 @@ def _find_intervals_within_tolerance(
 ):
     """
     Find all intervals within price tolerance of optimal.
-    
+
     Strategy:
     1. Calculate price threshold from optimal_price and tolerance
     2. Evaluate all candidate start times
@@ -176,6 +184,7 @@ def _find_intervals_within_tolerance(
 ```
 
 **For Intermittent Mode:**
+
 ```python
 # Modify: calc_intervals_for_intermittent()
 # Instead of strict price ordering, group slots within tolerance bands
@@ -190,7 +199,7 @@ def calc_intervals_for_intermittent_with_tolerance(
 ):
     """
     Select intermittent intervals with price tolerance.
-    
+
     Strategy:
     1. Find the cheapest individual slot price
     2. Calculate acceptable price threshold
@@ -206,6 +215,7 @@ def calc_intervals_for_intermittent_with_tolerance(
 #### Price Tolerance Behavior Examples
 
 **Scenario 1: Contiguous Mode with 10% Tolerance**
+
 ```
 Market prices (EUR/MWh) for 3-hour intervals:
 - 10:00-13:00: €30 (optimal, cheapest)
@@ -220,6 +230,7 @@ With 10% tolerance:
 ```
 
 **Scenario 2: Intermittent Mode with 15% Tolerance**
+
 ```
 Market prices (EUR/MWh) per hour, need 3 hours:
 - 01:00-02:00: €20 (rank 0, cheapest)
@@ -246,6 +257,7 @@ When both features are enabled together, they provide maximum flexibility:
 ### Example Use Case: EV Charging
 
 **Configuration:**
+
 - Earliest Start: 22:00
 - Latest End: 06:00
 - Maximum Duration: 6 hours
@@ -254,6 +266,7 @@ When both features are enabled together, they provide maximum flexibility:
 - Mode: Intermittent
 
 **Behavior:**
+
 1. Find the cheapest slots in the 22:00-06:00 window
 2. Calculate acceptable price threshold (cheapest + 20%)
 3. Select slots within price threshold until minimum 3 hours satisfied
@@ -261,6 +274,7 @@ When both features are enabled together, they provide maximum flexibility:
 5. Result: Optimal balance of cost, duration, and flexibility
 
 **Benefits:**
+
 - Guarantees minimum charge (3 hours)
 - Opportunistically charges more (up to 6 hours) if prices remain favorable
 - Allows for some price flexibility to create more contiguous blocks
@@ -275,6 +289,7 @@ When both features are enabled together, they provide maximum flexibility:
 **File:** `const.py`
 
 Add new constants:
+
 ```python
 # Duration modes
 CONF_DURATION_MODE = "duration_mode"
@@ -294,6 +309,7 @@ DEFAULT_PRICE_TOLERANCE = 0.0
 **File:** `config_flow.py`
 
 Update `OPTIONS_SCHEMA`:
+
 ```python
 OPTIONS_SCHEMA = vol.Schema(
     {
@@ -329,6 +345,7 @@ OPTIONS_SCHEMA = vol.Schema(
 #### Phase 1: Price Tolerance Only (Simpler)
 
 **Affected Files:**
+
 - `contiguous_interval.py` - Add tolerance parameter to `_find_extreme_price_interval()`
 - `intermittent_interval.py` - Add tolerance filtering to `calc_intervals_for_intermittent()`
 - `binary_sensor.py` - Pass tolerance configuration to calculation functions
@@ -339,6 +356,7 @@ OPTIONS_SCHEMA = vol.Schema(
 #### Phase 2: Flexible Duration (More Complex)
 
 **Affected Files:**
+
 - `contiguous_interval.py` - New function `calc_interval_for_contiguous_flexible()`
 - `intermittent_interval.py` - New function `calc_intervals_for_intermittent_flexible()`
 - `binary_sensor.py` - Add duration mode logic, call appropriate functions
@@ -349,6 +367,7 @@ OPTIONS_SCHEMA = vol.Schema(
 ### 3. Backward Compatibility
 
 Both features are fully backward compatible:
+
 - **Duration Mode:** Defaults to `EXACT` (current behavior)
 - **Price Tolerance:** Defaults to `0%` (current behavior)
 - **Existing Configurations:** Will continue to work identically
@@ -358,6 +377,7 @@ Both features are fully backward compatible:
 #### Unit Tests
 
 **New Test Files:**
+
 - `tests/test_contiguous_interval_flexible.py`
 - `tests/test_intermittent_interval_flexible.py`
 - `tests/test_price_tolerance.py`
@@ -365,18 +385,21 @@ Both features are fully backward compatible:
 **Test Scenarios:**
 
 1. **Flexible Duration Tests:**
+
    - Min = Max (equivalent to exact mode)
    - Min = 50% of Max
    - Min = 0 (fully flexible)
    - Edge cases: insufficient data for min duration
 
 2. **Price Tolerance Tests:**
+
    - Tolerance = 0% (exact matching)
    - Tolerance = 10%, 20%, 50%
    - Tolerance = 100% (accepts any price)
    - Edge cases: all prices outside tolerance
 
 3. **Combined Feature Tests:**
+
    - Flexible duration + price tolerance
    - Verify optimal selection with both constraints
    - Verify min duration always satisfied
@@ -388,6 +411,7 @@ Both features are fully backward compatible:
 #### Integration Tests
 
 1. **Binary Sensor State Tests:**
+
    - Sensor on/off states with flexible intervals
    - State changes when duration/tolerance updated
    - Attribute values (data, enabled, etc.)
@@ -404,6 +428,7 @@ Both features are fully backward compatible:
 ### Configuration UI
 
 **Current UI Fields:**
+
 1. Earliest Start Time
 2. Latest End Time
 3. Duration
@@ -412,6 +437,7 @@ Both features are fully backward compatible:
 6. Interval Mode
 
 **Proposed UI Fields:**
+
 1. Earliest Start Time
 2. Latest End Time
 3. **Duration Mode** (new dropdown: Exact / Flexible)
@@ -425,6 +451,7 @@ Both features are fully backward compatible:
 ### Sensor Attributes
 
 **New Attributes:**
+
 - `duration_mode`: Reflects configured duration mode
 - `min_duration`: Reflects minimum duration (if flexible mode)
 - `actual_duration`: Actual scheduled duration (may differ from max in flexible mode)
@@ -504,19 +531,21 @@ Both features are fully backward compatible:
 
 **Decision:** No significant concern due to small time horizon (24-96 hourly slots)
 
-**Approach:** Use straightforward algorithms, focus on correctness, add basic performance tests to catch regressions. 
+**Approach:** Use straightforward algorithms, focus on correctness, add basic performance tests to catch regressions.
 
 ---
 
 ## Dependencies
 
 ### Internal
+
 - Existing price calculation functions
 - Current interval selection algorithms
 - Binary sensor state management
 - Configuration flow system
 
 ### External
+
 - Home Assistant: Version ≥ 2023.x (for duration selector support)
 - voluptuous: Schema validation library
 - Python: 3.11+ (current requirement)
@@ -528,24 +557,28 @@ Both features are fully backward compatible:
 ### Feature Complete When:
 
 1. **Configuration:**
+
    - ✓ Duration mode (exact/flexible) added to config flow
    - ✓ Minimum duration field appears conditionally
    - ✓ Price tolerance field added with percentage selector
    - ✓ Validation prevents invalid configurations
 
 2. **Functionality:**
+
    - ✓ Flexible duration correctly finds intervals between min and max
    - ✓ Price tolerance correctly filters intervals within threshold
    - ✓ Combined mode works correctly
    - ✓ Backward compatibility maintained (defaults to exact behavior)
 
 3. **Testing:**
+
    - ✓ Unit tests cover all new code paths
    - ✓ Integration tests verify binary sensor behavior
    - ✓ Edge cases handled gracefully
    - ✓ Performance acceptable with large market data sets
 
 4. **Documentation:**
+
    - ✓ README updated with new configuration options
    - ✓ Examples provided for common use cases
    - ✓ Migration guide for existing users (none needed due to defaults)
@@ -560,29 +593,37 @@ Both features are fully backward compatible:
 ## Risks & Mitigations
 
 ### Risk 1: Algorithm Complexity
+
 **Impact:** High computation time with flexible duration + tolerance
-**Mitigation:** 
+**Mitigation:**
+
 - Implement efficient algorithms with pruning
 - Add performance benchmarks to tests
 - Consider async computation if needed
 
 ### Risk 2: User Confusion
+
 **Impact:** Users don't understand how tolerance affects selection
 **Mitigation:**
+
 - Provide clear descriptions and examples in UI
 - Add sensor attributes showing price threshold and actual selections
 - Create comprehensive documentation with visual examples
 
 ### Risk 3: Edge Cases
+
 **Impact:** Unexpected behavior with unusual configurations
 **Mitigation:**
+
 - Extensive unit tests covering edge cases
 - Clear documentation of limitations
 - Graceful fallback behavior (prefer working sub-optimally vs failing)
 
 ### Risk 4: Breaking Changes
+
 **Impact:** New features break existing installations
 **Mitigation:**
+
 - Strict backward compatibility requirement
 - Comprehensive regression testing
 - Beta testing period before release
@@ -592,22 +633,26 @@ Both features are fully backward compatible:
 ## Implementation Phases
 
 ### Phase 1: Price Tolerance Only (Recommended First)
+
 **Scope:** Add price tolerance feature only
 **Rationale:** Simpler to implement, provides immediate value, lower risk
 **Duration:** 1-2 weeks
 
 **Deliverables:**
+
 - Price tolerance configuration field
 - Modified interval selection algorithms
 - Unit tests for price tolerance
 - Updated documentation
 
 ### Phase 2: Flexible Duration
+
 **Scope:** Add flexible duration feature
 **Rationale:** More complex, builds on Phase 1 experience
 **Duration:** 2-3 weeks
 
 **Deliverables:**
+
 - Duration mode configuration
 - Minimum duration field
 - New flexible interval algorithms
@@ -615,11 +660,13 @@ Both features are fully backward compatible:
 - Updated documentation
 
 ### Phase 3: Combined Optimization
+
 **Scope:** Optimize combined feature behavior
 **Rationale:** Fine-tune how features interact
 **Duration:** 1 week
 
 **Deliverables:**
+
 - Performance optimizations
 - Enhanced secondary selection criteria
 - Integration tests
@@ -629,7 +676,7 @@ Both features are fully backward compatible:
 
 ## Related Issues
 
-*(To be filled in if GitHub issues exist)*
+_(To be filled in if GitHub issues exist)_
 
 ---
 
@@ -638,11 +685,13 @@ Both features are fully backward compatible:
 ### Design Decisions
 
 1. **Why Percentage-Based Tolerance?**
+
    - More intuitive for users ("within 10% of cheapest")
    - Scales appropriately with price levels
    - Alternative (absolute tolerance) considered but rejected due to varying price ranges
 
 2. **Why Separate Features?**
+
    - Users may want only one feature (flexibility vs tolerance)
    - Easier to test and debug independently
    - Clearer configuration options
@@ -682,22 +731,22 @@ def calc_interval_for_contiguous_flexible(
     optimal_result = calc_interval_for_contiguous(
         marketdata, earliest_start, latest_end, max_duration, most_expensive
     )
-    
+
     if optimal_result is None:
         # Can't satisfy max, try min
         return calc_interval_for_contiguous(
             marketdata, earliest_start, latest_end, min_duration, most_expensive
         )
-    
+
     # Step 2: If tolerance is 0, return optimal
     if tolerance_percent == 0:
         return optimal_result
-    
+
     # Step 3: Calculate price threshold
     threshold = optimal_result["price_per_hour"] * (1 + tolerance_percent / 100)
     if most_expensive:
         threshold = optimal_result["price_per_hour"] * (1 - tolerance_percent / 100)
-    
+
     # Step 4: Find all intervals between min and max duration within threshold
     candidates = []
     for duration in iterate_durations(min_duration, max_duration):
@@ -706,7 +755,7 @@ def calc_interval_for_contiguous_flexible(
         )
         if result and is_within_threshold(result["price_per_hour"], threshold, most_expensive):
             candidates.append(result)
-    
+
     # Step 5: Select best candidate (prefer longer duration if price similar)
     return select_best_candidate(candidates, prefer_longer=True)
 ```
@@ -726,32 +775,32 @@ def calc_intervals_for_intermittent_flexible(
     # Step 1: Filter and sort market data by price
     filtered_data = filter_market_data(marketdata, earliest_start, latest_end)
     sorted_data = sorted(filtered_data, key=lambda e: e.price, reverse=most_expensive)
-    
+
     # Step 2: Find the reference price (cheapest/most expensive slot)
     reference_price = sorted_data[0].price
-    
+
     # Step 3: Calculate price threshold
     threshold = reference_price * (1 + tolerance_percent / 100)
     if most_expensive:
         threshold = reference_price * (1 - tolerance_percent / 100)
-    
+
     # Step 4: Filter slots within tolerance
     acceptable_slots = [
         slot for slot in sorted_data
         if is_within_threshold(slot.price, threshold, most_expensive)
     ]
-    
+
     # Step 5: Select slots until min_duration satisfied (strict price order)
     intervals = []
     active_time = timedelta(0)
-    
+
     for slot in sorted_data:  # Use strict ordering for minimum
         if active_time >= min_duration:
             break
         interval, duration = create_interval_from_slot(slot, earliest_start, latest_end)
         intervals.append(interval)
         active_time += duration
-    
+
     # Step 6: Continue adding acceptable slots up to max_duration (with tolerance)
     for slot in acceptable_slots:
         if active_time >= max_duration:
@@ -761,10 +810,10 @@ def calc_intervals_for_intermittent_flexible(
             if active_time + duration <= max_duration:
                 intervals.append(interval)
                 active_time += duration
-    
+
     # Step 7: Optimize for contiguity
     intervals = merge_contiguous_intervals(intervals)
-    
+
     return intervals
 ```
 
@@ -781,9 +830,9 @@ entity_id: sensor.epex_spot_de
 earliest_start_time: "22:00:00"
 latest_end_time: "06:00:00"
 duration_mode: flexible
-duration: "06:00:00"  # max 6 hours
-min_duration: "03:00:00"  # min 3 hours
-price_tolerance: 20  # within 20% of cheapest
+duration: "06:00:00" # max 6 hours
+min_duration: "03:00:00" # min 3 hours
+price_tolerance: 20 # within 20% of cheapest
 price_mode: cheapest
 interval_mode: intermittent
 ```
@@ -795,10 +844,10 @@ interval_mode: intermittent
 name: "Heat Pump Smart Schedule"
 entity_id: sensor.epex_spot_de
 earliest_start_time: "00:00:00"
-latest_end_time: "00:00:00"  # full 24h
+latest_end_time: "00:00:00" # full 24h
 duration_mode: exact
-duration: "04:00:00"  # exactly 4 hours
-price_tolerance: 15  # within 15% of cheapest
+duration: "04:00:00" # exactly 4 hours
+price_tolerance: 15 # within 15% of cheapest
 price_mode: cheapest
 interval_mode: contiguous
 ```
@@ -812,9 +861,9 @@ entity_id: sensor.epex_spot_de
 earliest_start_time: "10:00:00"
 latest_end_time: "18:00:00"
 duration_mode: flexible
-duration: "04:00:00"  # max 4 hours
-min_duration: "02:00:00"  # min 2 hours
-price_tolerance: 0  # strict cheapest only
+duration: "04:00:00" # max 4 hours
+min_duration: "02:00:00" # min 2 hours
+price_tolerance: 0 # strict cheapest only
 price_mode: cheapest
 interval_mode: intermittent
 ```

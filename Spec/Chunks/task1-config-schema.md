@@ -1,6 +1,7 @@
 # Task 1: Add Price Tolerance Configuration
 
 ## Objective
+
 Add `price_tolerance` configuration parameter to the EPEX Spot Sensor configuration schema.
 
 ## Files to Modify
@@ -8,6 +9,7 @@ Add `price_tolerance` configuration parameter to the EPEX Spot Sensor configurat
 ### 1. `custom_components/epex_spot_sensor/const.py`
 
 Add new constant:
+
 ```python
 CONF_PRICE_TOLERANCE = "price_tolerance"
 DEFAULT_PRICE_TOLERANCE = 0.0
@@ -16,6 +18,7 @@ DEFAULT_PRICE_TOLERANCE = 0.0
 ### 2. `custom_components/epex_spot_sensor/config_flow.py`
 
 Add to `OPTIONS_SCHEMA` (after interval mode, before closing brace):
+
 ```python
 vol.Optional(
     CONF_PRICE_TOLERANCE, default=DEFAULT_PRICE_TOLERANCE
@@ -31,6 +34,7 @@ vol.Optional(
 ```
 
 Import the new constant at the top:
+
 ```python
 from .const import (
     # ... existing imports ...
@@ -41,6 +45,7 @@ from .const import (
 ### 3. `custom_components/epex_spot_sensor/translations/en.json`
 
 Add translation for the new field:
+
 ```json
 {
   "config": {
@@ -81,6 +86,7 @@ Add translation for the new field:
 ## Testing
 
 After implementation, verify:
+
 1. Configuration UI shows new field
 2. Default value is 0%
 3. Value can be changed and saved
