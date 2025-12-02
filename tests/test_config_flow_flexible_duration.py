@@ -1,6 +1,7 @@
 """Test flexible duration configuration fields."""
 
 import pytest
+import voluptuous as vol
 from custom_components.epex_spot_sensor import config_flow
 from custom_components.epex_spot_sensor.const import (
     CONF_DURATION_MODE,
@@ -86,5 +87,67 @@ class TestFlexibleDurationConfig:
         }
 
         # This should work
+        result = schema(config_data)
+        assert result is not None
+
+    def test_min_duration_validation_greater_than_duration(self):
+        """Test that min_duration > duration raises Invalid."""
+        schema = config_flow.OptionsFlowHandler.async_get_options_flow_config_schema(
+            {CONF_DURATION_MODE: "flexible"}
+        )
+
+        config_data = {
+            "earliest_start_time": "22:00:00",
+            "latest_end_time": "06:00:00",
+            "duration_mode": "flexible",
+            "duration": {"hours": 2},
+            "min_duration": {"hours": 3},  # min > duration
+            "price_mode": "cheapest",
+            "interval_mode": "intermittent",
+            "price_tolerance": 15,
+        }
+
+        with pytest.raises(
+            vol.Invalid, match="min_duration must be less than or equal to duration"
+        ):
+            schema(config_data)
+
+    def test_min_duration_validation_less_or_equal_zero(self):
+        """Test that min_duration <= 0 raises Invalid."""
+        schema = config_flow.OptionsFlowHandler.async_get_options_flow_config_schema(
+            {CONF_DURATION_MODE: "flexible"}
+        )
+
+        config_data = {
+            "earliest_start_time": "22:00:00",
+            "latest_end_time": "06:00:00",
+            "duration_mode": "flexible",
+            "duration": {"hours": 2},
+            "min_duration": {"hours": 0},  # min <= 0
+            "price_mode": "cheapest",
+            "interval_mode": "intermittent",
+            "price_tolerance": 15,
+        }
+
+        with pytest.raises(vol.Invalid, match="min_duration must be greater than 0"):
+            schema(config_data)
+
+    def test_min_duration_validation_valid(self):
+        """Test that valid min_duration passes."""
+        schema = config_flow.OptionsFlowHandler.async_get_options_flow_config_schema(
+            {CONF_DURATION_MODE: "flexible"}
+        )
+
+        config_data = {
+            "earliest_start_time": "22:00:00",
+            "latest_end_time": "06:00:00",
+            "duration_mode": "flexible",
+            "duration": {"hours": 4},
+            "min_duration": {"hours": 2},
+            "price_mode": "cheapest",
+            "interval_mode": "intermittent",
+            "price_tolerance": 15,
+        }
+
         result = schema(config_data)
         assert result is not None
