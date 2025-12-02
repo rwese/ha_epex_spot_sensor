@@ -54,10 +54,19 @@ In case you would like to install manually:
 4. Remaining Duration Entity  
    Optional entity which indicates the remaining duration. If entity is set, it replaces the static duration. If the state of the `Remaining Duration Entity` changes between `Earliest Start Time` and `Latest End Time`, the configured `Earliest Start Time` will be ignore and the latest change time of the `Remaining Duration Entity` will the used instead.
 
-5. Price Mode  
+5. Price Tolerance (%)  
+   Allow time slots within ±X% of the cheapest/most expensive price. Default is 0% (exact matching). Higher values provide more flexibility in scheduling while staying close to optimal prices.
+   
+   - **0%** = Exact cheapest/most expensive (default behavior)
+   - **10-20%** = Moderate flexibility, good for most use cases
+   - **50%+** = High flexibility, prioritizes convenience over cost optimization
+   
+   When multiple intervals are within tolerance, the system prefers earlier start times.
+
+6. Price Mode  
    Selects whether the sensor shall react on the cheapest or the most expensive prices between `Earliest Start Time` and `Latest End Time`.
 
-6. Interval Mode  
+7. Interval Mode  
    Selects whether the specified duration shall be completed in a single, contiguous interval or can be split into multiple, not contiguous intervals (`intermittend`).
 
 ## Sensor Attributes
