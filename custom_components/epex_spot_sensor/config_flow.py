@@ -52,6 +52,7 @@ OPTIONS_SCHEMA = vol.Schema(
         vol.Optional(CONF_DURATION_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=[INPUT_NUMBER_DOMAIN, SENSOR_DOMAIN])
         ),
+        vol.Optional(CONF_MIN_DURATION): selector.DurationSelector(),
         vol.Required(
             CONF_PRICE_MODE, default=PriceModes.CHEAPEST
         ): selector.SelectSelector(
