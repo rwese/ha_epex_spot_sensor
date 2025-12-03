@@ -100,7 +100,7 @@ CONFIG_SCHEMA = vol.Schema(
     }
 ).extend(OPTIONS_SCHEMA.schema)
 
-CONFIG_FLOW = {"init": SchemaFlowFormStep(CONFIG_SCHEMA)}
+CONFIG_FLOW = {"user": SchemaFlowFormStep(CONFIG_SCHEMA)}
 
 
 class ConfigFlowHandler(SchemaConfigFlowHandler, domain=DOMAIN):

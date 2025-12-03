@@ -4,7 +4,7 @@
   "codeowners": ["@mampfes"],
   "config_flow": true,
   "documentation": "https://github.com/mampfes/ha_epex_spot_sensor",
-  "integration_type": "helper",
+   "integration_type": "device",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/mampfes/ha_epex_spot_sensor/issues",
   "version": "1.3.2"
