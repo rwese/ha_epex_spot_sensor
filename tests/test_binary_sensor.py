@@ -115,6 +115,9 @@ async def test_binary_sensor_update_state(hass, freezer):
     # At 12:00, we are in the cheapest interval (12:00-13:00)
     assert state.state == "on"
 
+    visualization_data = state.attributes.get("visualization_data")
+    assert isinstance(visualization_data, dict)
+
     # Move time to 13:01
     future = now + timedelta(hours=1, minutes=1)
     freezer.move_to(future)

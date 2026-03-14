@@ -115,3 +115,31 @@ In case you would like to install manually:
 
 12. Data  
     List of calculated intervals to switch sensor on, consisting of `start_time`, `end_time` and `rank` (for Interval Mode intermittend only).
+
+## UI Visualization (historic + selected intervals)
+
+Each binary sensor now exposes an additional attribute `visualization_data` that is designed for dashboards.
+It contains:
+
+- `market_prices`: historic/forecast price buckets (`start_time`, `end_time`, `price`)
+- `selected_intervals`: the intervals chosen by the sensor logic
+- `price_range`: min/max values for quick chart scaling
+- `price_unit`, `window_start`, `window_end`
+
+You can use this attribute with custom Lovelace cards (for example [apexcharts-card]) to overlay selected runtime intervals on top of the hourly prices.
+
+Example template sensor to flatten data for charts:
+
+```yaml
+template:
+  - sensor:
+      - name: "Waschmaschine Price Points"
+        state: "{{ now() }}"
+        attributes:
+          points: >-
+            {{ state_attr('binary_sensor.waschmaschine', 'visualization_data').market_prices
+               if state_attr('binary_sensor.waschmaschine', 'visualization_data') else [] }}
+          selected: >-
+            {{ state_attr('binary_sensor.waschmaschine', 'visualization_data').selected_intervals
+               if state_attr('binary_sensor.waschmaschine', 'visualization_data') else [] }}
+```

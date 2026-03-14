@@ -32,6 +32,7 @@ from homeassistant.helpers.event import (
 
 from .const import (
     ATTR_DATA,
+    ATTR_VISUALIZATION_DATA,
     ATTR_RANK,
     ATTR_INTERVAL_ENABLED,
     ATTR_START_TIME,
@@ -187,6 +188,7 @@ class BinarySensor(BinarySensorEntity):
         self._interval_enabled: bool = False
         self._state: bool | None = None
         self._intervals: list | None = None
+        self._visualization_data: dict[str, Any] = {}
 
         @callback
         def async_update_state(
@@ -234,6 +236,7 @@ class BinarySensor(BinarySensorEntity):
             CONF_INTERVAL_MODE: self._interval_mode,
             ATTR_INTERVAL_ENABLED: self._interval_enabled,
             ATTR_DATA: self._intervals,
+            ATTR_VISUALIZATION_DATA: self._visualization_data or {},
         }
 
     @callback
@@ -243,6 +246,7 @@ class BinarySensor(BinarySensorEntity):
         self._state = None
 
         # get price sensor attributes first
+        self._visualization_data = {}
         if (new_state := self._hass.states.get(self._entity_id)) is None:
             # _LOGGER.warning(f"Can't get states of {self._entity_id}")
             return
@@ -295,6 +299,43 @@ class BinarySensor(BinarySensorEntity):
             _LOGGER.error(f"invalid interval mode: {self._interval_mode}")
 
         self.async_write_ha_state()
+
+    def _build_visualization_data(self, marketdata, intervals):
+        marketdata_in_window = [
+            entry
+            for entry in marketdata
+            if entry.start_time >= self._interval_start_time
+        ]
+
+        if not marketdata_in_window:
+            return {
+                "price_unit": None,
+                "window_start": dt_util.as_local(self._interval_start_time).isoformat(),
+                "window_end": None,
+                "market_prices": [],
+                "selected_intervals": intervals,
+                "price_range": {"min": None, "max": None},
+            }
+
+        prices = [entry.price for entry in marketdata_in_window]
+        min_price = min(prices)
+        max_price = max(prices)
+
+        return {
+            "price_unit": marketdata_in_window[0].price_uom,
+            "window_start": dt_util.as_local(self._interval_start_time).isoformat(),
+            "window_end": dt_util.as_local(marketdata_in_window[-1].end_time).isoformat(),
+            "market_prices": [
+                {
+                    ATTR_START_TIME: dt_util.as_local(entry.start_time).isoformat(),
+                    ATTR_END_TIME: dt_util.as_local(entry.end_time).isoformat(),
+                    "price": entry.price,
+                }
+                for entry in marketdata_in_window
+            ],
+            "selected_intervals": intervals,
+            "price_range": {"min": min_price, "max": max_price},
+        }
 
     def _update_state_for_intermittent(
         self, earliest_start: time, latest_end: time, now: datetime
@@ -352,6 +393,7 @@ class BinarySensor(BinarySensorEntity):
             }
             for e in sorted(intervals, key=lambda e: e.start_time)
         ]
+        self._visualization_data = self._build_visualization_data(marketdata, self._intervals)
 
     def _update_state_for_contiguous(
         self, earliest_start: time, latest_end: time, now: datetime
@@ -418,6 +460,8 @@ class BinarySensor(BinarySensorEntity):
                     ATTR_END_TIME: dt_util.as_local(result["end"]).isoformat(),
                 }
             )
+
+        self._visualization_data = self._build_visualization_data(marketdata, self._intervals)
 
     def _get_marketdata(self):
         try:
