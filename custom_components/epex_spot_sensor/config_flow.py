@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from datetime import timedelta
 from typing import Any
 
 import voluptuous as vol
-
 from homeassistant.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.const import CONF_ENTITY_ID, CONF_NAME
@@ -18,22 +16,21 @@ from homeassistant.helpers.schema_config_entry_flow import (
 )
 
 from .const import (
-    PriceModes,
-    IntervalModes,
-    DurationModes,
-    CONF_EARLIEST_START_TIME,
-    CONF_LATEST_END_TIME,
-    CONF_INTERVAL_MODE,
-    CONF_PRICE_MODE,
     CONF_DURATION,
     CONF_DURATION_ENTITY_ID,
+    CONF_DURATION_MODE,
+    CONF_EARLIEST_START_TIME,
+    CONF_INTERVAL_MODE,
+    CONF_LATEST_END_TIME,
+    CONF_MIN_DURATION,
+    CONF_PRICE_MODE,
     CONF_PRICE_TOLERANCE,
     DEFAULT_PRICE_TOLERANCE,
-    CONF_DURATION_MODE,
-    CONF_MIN_DURATION,
     DOMAIN,
+    DurationModes,
+    IntervalModes,
+    PriceModes,
 )
-
 
 OPTIONS_SCHEMA = vol.Schema(
     {

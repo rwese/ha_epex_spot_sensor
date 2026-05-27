@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, time, timedelta
 import logging
+from datetime import datetime, time, timedelta
 from typing import Any
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
@@ -31,7 +31,7 @@ from .const import (
     ATTR_PRICE_PER_KWH,
     ATTR_RANK,
     ATTR_START_TIME,
-    DurationModes,
+    ATTR_VISUALIZATION_DATA,
     CONF_DURATION,
     CONF_DURATION_ENTITY_ID,
     CONF_DURATION_MODE,
@@ -43,11 +43,15 @@ from .const import (
     CONF_PRICE_MODE,
     CONF_PRICE_TOLERANCE,
     DEFAULT_PRICE_TOLERANCE,
+    DurationModes,
     IntervalModes,
     PriceModes,
 )
 from .contiguous_interval import calc_interval_for_contiguous
-from .intermittent_interval import calc_intervals_for_intermittent, is_now_in_intervals
+from .intermittent_interval import (
+    calc_intervals_for_intermittent,
+    is_now_in_intervals,
+)
 from .util import get_marketdata_from_sensor_attrs
 
 _LOGGER = logging.getLogger(__name__)
@@ -177,6 +181,7 @@ class BinarySensor(BinarySensorEntity):
         self._interval_enabled: bool = False
         self._state: bool | None = None
         self._intervals: list | None = None
+        self._visualization_data: dict[str, Any] = {}
 
         @callback
         def async_update_state(
@@ -225,6 +230,7 @@ class BinarySensor(BinarySensorEntity):
             ATTR_INTERVAL_ENABLED: self._interval_enabled,
             ATTR_MEAN_PRICE_PER_KWH: self._price_mode,
             ATTR_DATA: self._intervals,
+            ATTR_VISUALIZATION_DATA: self._visualization_data or {},
         }
 
     @callback
@@ -234,6 +240,7 @@ class BinarySensor(BinarySensorEntity):
         self._state = None
 
         # get price sensor attributes first
+        self._visualization_data = {}
         if (new_state := self._hass.states.get(self._entity_id)) is None:
             _LOGGER.warning(f"Can't get states of {self._entity_id}")
             return
@@ -286,6 +293,45 @@ class BinarySensor(BinarySensorEntity):
             _LOGGER.error(f"invalid interval mode: {self._interval_mode}")
 
         self.async_write_ha_state()
+
+    def _build_visualization_data(self, marketdata, intervals):
+        marketdata_in_window = [
+            entry
+            for entry in marketdata
+            if entry.start_time >= self._interval_start_time
+        ]
+
+        if not marketdata_in_window:
+            return {
+                "price_unit": None,
+                "window_start": dt_util.as_local(self._interval_start_time).isoformat(),
+                "window_end": None,
+                "market_prices": [],
+                "selected_intervals": intervals,
+                "price_range": {"min": None, "max": None},
+            }
+
+        prices = [entry.price for entry in marketdata_in_window]
+        min_price = min(prices)
+        max_price = max(prices)
+
+        return {
+            "price_unit": marketdata_in_window[0].price_uom,
+            "window_start": dt_util.as_local(self._interval_start_time).isoformat(),
+            "window_end": dt_util.as_local(
+                marketdata_in_window[-1].end_time
+            ).isoformat(),
+            "market_prices": [
+                {
+                    ATTR_START_TIME: dt_util.as_local(entry.start_time).isoformat(),
+                    ATTR_END_TIME: dt_util.as_local(entry.end_time).isoformat(),
+                    "price": entry.price,
+                }
+                for entry in marketdata_in_window
+            ],
+            "selected_intervals": intervals,
+            "price_range": {"min": min_price, "max": max_price},
+        }
 
     def _update_state_for_intermittent(
         self, earliest_start: time, latest_end: time, now: datetime
@@ -344,6 +390,9 @@ class BinarySensor(BinarySensorEntity):
             }
             for e in sorted(intervals, key=lambda e: e.start_time)
         ]
+        self._visualization_data = self._build_visualization_data(
+            marketdata, self._intervals
+        )
 
     def _update_state_for_contiguous(
         self, earliest_start: time, latest_end: time, now: datetime
@@ -408,6 +457,10 @@ class BinarySensor(BinarySensorEntity):
                     ATTR_END_TIME: dt_util.as_local(result["end"]).isoformat(),
                 }
             )
+
+        self._visualization_data = self._build_visualization_data(
+            marketdata, self._intervals
+        )
 
     def _get_marketdata(self):
         try:

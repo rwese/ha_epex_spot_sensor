@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime, timedelta
 
-
 _LOGGER = logging.getLogger(__name__)
 
 SECONDS_PER_HOUR = 60 * 60
@@ -118,7 +117,8 @@ def _find_extreme_price_interval(
         price_tolerance_percent: Price tolerance percentage (0.0 = no tolerance)
 
     Returns:
-        Dict with start, end, interval_price, price_per_hour, or None if no valid interval
+        Dict with start, end, interval_price, price_per_hour, or None if no
+        valid interval
     """
     interval_price: float | None = None
     interval_start_time: timedelta | None = None

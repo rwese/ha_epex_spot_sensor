@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime, timedelta
 
-
 _LOGGER = logging.getLogger(__name__)
 
 SECONDS_PER_HOUR = 60 * 60
@@ -192,7 +191,7 @@ def calc_intervals_for_intermittent(
             price = mp.price * actual_duration.total_seconds() / SECONDS_PER_HOUR
             price_per_hour = mp.price
 
-            # Check price threshold for additional segments (after min_duration and if flexible)
+            # Check price threshold for additional segments after min_duration.
             if (
                 active_time >= min_duration
                 and min_duration < max_duration
