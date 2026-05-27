@@ -6,6 +6,7 @@ from custom_components.epex_spot_sensor.const import (
     CONF_MIN_DURATION,
     CONF_PRICE_TOLERANCE,
 )
+from homeassistant.const import CONF_ENTITY_ID
 
 
 class TestFlexibleDurationConfig:
@@ -38,6 +39,7 @@ class TestFlexibleDurationConfig:
 
         # Try to create config with exact mode
         config_data = {
+            CONF_ENTITY_ID: "sensor.epex_spot_price",
             "earliest_start_time": "22:00:00",
             "latest_end_time": "06:00:00",
             "duration_mode": "exact",
@@ -57,6 +59,7 @@ class TestFlexibleDurationConfig:
 
         # Try to create config with flexible mode
         config_data = {
+            CONF_ENTITY_ID: "sensor.epex_spot_price",
             "earliest_start_time": "22:00:00",
             "latest_end_time": "06:00:00",
             "duration_mode": "flexible",

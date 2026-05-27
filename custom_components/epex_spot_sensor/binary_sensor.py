@@ -412,7 +412,8 @@ class BinarySensor(BinarySensorEntity):
         )
 
         if result is None:
-            # no interval found, probably because data for next day is missing, or last day's data are gone
+            # No interval found: next-day data may be missing or previous-day
+            # data may no longer be available.
             self._state = False
             self._intervals = []
         else:
@@ -446,7 +447,8 @@ class BinarySensor(BinarySensorEntity):
             if result is None:
                 if len(self._intervals) == 0:
                     # no interval found up until today, and none for tomorrow
-                    # we are probably before next interval start, have not all data for yesterday anymore
+                    # we are likely before the next interval start and no
+                    # longer have all previous-day data
                     # and tomorrows data are not available yet
                     self._state = False
                 return
