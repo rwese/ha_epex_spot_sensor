@@ -1,6 +1,7 @@
 """Tests for price tolerance in contiguous mode."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+
 from custom_components.epex_spot_sensor.contiguous_interval import (
     calc_interval_for_contiguous,
 )
@@ -17,7 +18,7 @@ class MockMarketPrice:
 
 def test_tolerance_zero_matches_current_behavior():
     """Test that tolerance=0 returns exact same result as current behavior."""
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     marketdata = [
         MockMarketPrice(
             start + timedelta(hours=i), start + timedelta(hours=i + 1), price
@@ -44,7 +45,7 @@ def test_tolerance_zero_matches_current_behavior():
 
 def test_tolerance_10_percent_cheapest():
     """Test 10% tolerance in cheapest mode."""
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     # Prices: 20, 10 (cheapest), 11 (within 10%), 15, 12 (within 10%)
     marketdata = [
         MockMarketPrice(
@@ -73,7 +74,7 @@ def test_tolerance_10_percent_cheapest():
 
 def test_tolerance_prefers_earlier_start():
     """Test that when multiple intervals are within tolerance, earlier is preferred."""
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     # Prices: 11, 12, 10 (cheapest), 11, 12
     marketdata = [
         MockMarketPrice(
@@ -84,7 +85,7 @@ def test_tolerance_prefers_earlier_start():
 
     # Cheapest is 10 at index 2 (02:00-03:00)
     # 20% tolerance: accept up to 10 * 1.20 = 12
-    # Acceptable intervals: index 0 (11), index 1 (12), index 2 (10), index 3 (11), index 4 (12)
+    # Acceptable: index 0 (11), 1 (12), 2 (10), 3 (11), 4 (12)
     # Should prefer earliest: index 0
     result = calc_interval_for_contiguous(
         marketdata,
@@ -102,7 +103,7 @@ def test_tolerance_prefers_earlier_start():
 
 def test_tolerance_20_percent():
     """Test 20% tolerance."""
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     # Prices: 25, 15, 20 (cheapest), 18, 30
     marketdata = [
         MockMarketPrice(
@@ -131,7 +132,7 @@ def test_tolerance_20_percent():
 
 def test_tolerance_50_percent():
     """Test 50% tolerance."""
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     # Prices: 30, 20 (cheapest), 25, 35, 28
     marketdata = [
         MockMarketPrice(
@@ -160,7 +161,7 @@ def test_tolerance_50_percent():
 
 def test_tolerance_100_percent_all_acceptable():
     """Test 100% tolerance - all intervals acceptable, select earliest."""
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     # Prices: 30, 20 (cheapest), 25, 35, 28
     marketdata = [
         MockMarketPrice(
@@ -201,7 +202,7 @@ def test_tolerance_no_intervals_within_threshold_fallback(caplog):
     not currently possible with the implementation (which is by design - the optimal
     is always acceptable).
     """
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     # Prices: 30, 10 (cheapest), 25, 35, 28
     marketdata = [
         MockMarketPrice(
@@ -234,7 +235,7 @@ def test_tolerance_no_intervals_within_threshold_fallback(caplog):
 
 def test_tolerance_most_expensive_mode():
     """Test price tolerance in most expensive mode."""
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     # Prices: 20, 30 (most expensive), 28, 15, 29
     marketdata = [
         MockMarketPrice(
@@ -263,7 +264,7 @@ def test_tolerance_most_expensive_mode():
 
 def test_tolerance_most_expensive_prefers_earlier():
     """Test most expensive mode prefers earlier start when multiple within tolerance."""
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     # Prices: 28, 29, 30 (most expensive), 28, 29
     marketdata = [
         MockMarketPrice(
@@ -292,7 +293,7 @@ def test_tolerance_most_expensive_prefers_earlier():
 
 def test_tolerance_multi_hour_interval():
     """Test price tolerance with multi-hour contiguous interval."""
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     # Prices for 6 hours: 10, 15, 20, 12, 18, 25
     marketdata = [
         MockMarketPrice(
@@ -330,7 +331,7 @@ def test_tolerance_multi_hour_interval():
 
 def test_tolerance_with_earliest_start_constraint():
     """Test tolerance respects earliest_start constraint."""
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     # Prices: 10, 15, 20, 12, 18, 25
     marketdata = [
         MockMarketPrice(

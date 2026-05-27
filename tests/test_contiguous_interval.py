@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+
 from custom_components.epex_spot_sensor.contiguous_interval import (
     calc_interval_for_contiguous,
 )
@@ -12,7 +13,7 @@ class MockMarketPrice:
 
 
 def test_calc_interval_for_contiguous_simple():
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     marketdata = [
         MockMarketPrice(
             start + timedelta(hours=i), start + timedelta(hours=i + 1), price
@@ -36,7 +37,7 @@ def test_calc_interval_for_contiguous_simple():
 
 
 def test_calc_interval_for_contiguous_most_expensive():
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     marketdata = [
         MockMarketPrice(
             start + timedelta(hours=i), start + timedelta(hours=i + 1), price
@@ -60,7 +61,7 @@ def test_calc_interval_for_contiguous_most_expensive():
 
 
 def test_calc_interval_for_contiguous_insufficient_data():
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     marketdata = [
         MockMarketPrice(start + timedelta(hours=i), start + timedelta(hours=i + 1), 10)
         for i in range(2)
@@ -80,7 +81,7 @@ def test_calc_interval_for_contiguous_insufficient_data():
 
 def test_calc_interval_for_contiguous_crossing_midnight():
     # Data from 22:00 to 02:00 next day
-    start = datetime(2023, 10, 1, 22, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 22, 0, 0, tzinfo=UTC)
     marketdata = [
         MockMarketPrice(
             start + timedelta(hours=i), start + timedelta(hours=i + 1), price
@@ -114,12 +115,12 @@ def test_calc_interval_price_missing_data():
     # We request calculation for 12:00-14:00.
     # 13:00-14:00 is missing.
 
-    start_time = datetime(2023, 10, 10, 12, 0, tzinfo=timezone.utc)
+    start_time = datetime(2023, 10, 10, 12, 0, tzinfo=UTC)
     marketdata = [MockMarketPrice(start_time, start_time + timedelta(hours=1), 10.0)]
 
     duration = timedelta(hours=2)
 
-    # This should return None (gracefully handle missing data), but currently raises AttributeError
-    # because _calc_interval_price tries to access .end_time on None result from _find_market_price
+    # This should return None for missing data, but currently raises AttributeError
+    # because _calc_interval_price accesses .end_time on a missing market price.
     price = _calc_interval_price(marketdata, start_time, duration)
     assert price is None

@@ -1,6 +1,7 @@
 """Tests for price tolerance in intermittent mode."""
 
 from datetime import datetime, timedelta
+
 from custom_components.epex_spot_sensor.intermittent_interval import (
     calc_intervals_for_intermittent,
 )

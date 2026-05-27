@@ -1,17 +1,18 @@
 from datetime import timedelta
 from unittest.mock import patch
+
 import pytest
-from homeassistant.util import dt as dt_util
-from homeassistant.const import CONF_ENTITY_ID
 from custom_components.epex_spot_sensor.const import (
-    CONF_EARLIEST_START_TIME,
-    CONF_LATEST_END_TIME,
     CONF_DURATION,
+    CONF_EARLIEST_START_TIME,
     CONF_INTERVAL_MODE,
+    CONF_LATEST_END_TIME,
     CONF_PRICE_MODE,
     IntervalModes,
     PriceModes,
 )
+from homeassistant.const import CONF_ENTITY_ID
+from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
@@ -114,6 +115,9 @@ async def test_binary_sensor_update_state(hass, freezer):
     assert state is not None
     # At 12:00, we are in the cheapest interval (12:00-13:00)
     assert state.state == "on"
+
+    visualization_data = state.attributes.get("visualization_data")
+    assert isinstance(visualization_data, dict)
 
     # Move time to 13:01
     future = now + timedelta(hours=1, minutes=1)

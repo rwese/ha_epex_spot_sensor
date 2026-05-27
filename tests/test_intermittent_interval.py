@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+
 from custom_components.epex_spot_sensor.intermittent_interval import (
     calc_intervals_for_intermittent,
 )
@@ -32,7 +33,7 @@ def test_calc_intervals_for_intermittent_simple():
     assert intervals is not None
     assert len(intervals) == 2
 
-    # Sorted by start time in output? No, the function returns them in order of processing or price?
+    # The function sorts by price internally to pick, but returns a list.
     # The function sorts by price internally to pick, but returns a list.
     # Let's check the values.
     prices = sorted([i.price for i in intervals])
@@ -75,7 +76,8 @@ def test_calc_intervals_for_intermittent_partial_slots():
         for i, price in enumerate([10, 5, 20, 10])
     ]
 
-    # Duration 1.5 hours. Cheapest is 1h at 5, and 0.5h at 10 (either first or last slot)
+    # Duration 1.5 hours.
+    # Cheapest is 1h at 5, and 0.5h at 10.
     # The logic sorts by price.
     # 1. 5.0 (01:00-02:00)
     # 2. 10.0 (00:00-01:00) OR 10.0 (03:00-04:00). Stable sort?
@@ -177,8 +179,10 @@ def test_intermittent_connectivity_optimization():
     # Picks 00:00 (1h), 02:00 (1h). Total 2h.
     # Needs 0.5h from 01:00.
     # 01:00 is between 00:00 and 02:00.
-    # Option A (Start): 01:00-01:30. Connects to 00:00. Result: 00:00-01:30, 02:00-03:00.
-    # Option B (End): 01:30-02:00. Connects to 02:00. Result: 00:00-01:00, 01:30-03:00.
+    # Option A (Start): 01:00-01:30 connects to 00:00.
+    # Result: 00:00-01:30, 02:00-03:00.
+    # Option B (End): 01:30-02:00 connects to 02:00.
+    # Result: 00:00-01:00, 01:30-03:00.
     # Both are equal score (1 connection).
 
     # Case: 23:00 (Rank 4), 00:00 (Rank 3), 01:00 (Rank 2), 02:00 (Rank 1).

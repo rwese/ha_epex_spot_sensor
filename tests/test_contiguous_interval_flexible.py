@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+
 from custom_components.epex_spot_sensor.contiguous_interval import (
     calc_interval_for_contiguous,
 )
@@ -13,7 +14,7 @@ class MockMarketPrice:
 
 def test_flexible_duration_exact_mode():
     """Test flexible duration with min_duration = max_duration (exact mode)."""
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     marketdata = [
         MockMarketPrice(
             start + timedelta(hours=i), start + timedelta(hours=i + 1), price
@@ -39,7 +40,7 @@ def test_flexible_duration_exact_mode():
 
 def test_flexible_duration_range():
     """Test flexible duration with min < max."""
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     marketdata = [
         MockMarketPrice(
             start + timedelta(hours=i), start + timedelta(hours=i + 1), price
@@ -58,7 +59,7 @@ def test_flexible_duration_range():
     )
 
     assert result is not None
-    # Should find the 1-hour interval at 01:00-02:00 with price 5, as it's cheaper per hour than others
+    # Should find the cheapest per-hour 1-hour interval at 01:00-02:00.
     assert result["start"] == start + timedelta(hours=1)
     assert result["end"] == start + timedelta(hours=2)
     assert result["interval_price"] == 5
@@ -66,7 +67,7 @@ def test_flexible_duration_range():
 
 def test_flexible_duration_with_tolerance():
     """Test flexible duration with price tolerance."""
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     marketdata = [
         MockMarketPrice(
             start + timedelta(hours=i), start + timedelta(hours=i + 1), price
@@ -92,7 +93,7 @@ def test_flexible_duration_with_tolerance():
 
 def test_flexible_duration_no_valid_intervals():
     """Test flexible duration with no valid intervals in range."""
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     marketdata = [
         MockMarketPrice(
             start + timedelta(hours=i), start + timedelta(hours=i + 1), price
@@ -115,7 +116,7 @@ def test_flexible_duration_no_valid_intervals():
 
 def test_flexible_duration_most_expensive():
     """Test flexible duration finding most expensive."""
-    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2023, 10, 1, 0, 0, 0, tzinfo=UTC)
     marketdata = [
         MockMarketPrice(
             start + timedelta(hours=i), start + timedelta(hours=i + 1), price

@@ -1,7 +1,5 @@
 """Test flexible duration configuration fields."""
 
-import pytest
-import voluptuous as vol
 from custom_components.epex_spot_sensor import config_flow
 from custom_components.epex_spot_sensor.const import (
     CONF_DURATION_MODE,

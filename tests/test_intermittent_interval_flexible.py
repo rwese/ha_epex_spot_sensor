@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+
 from custom_components.epex_spot_sensor.intermittent_interval import (
     calc_intervals_for_intermittent,
 )
@@ -65,8 +66,8 @@ def test_flexible_duration_with_price_threshold():
 
     assert intervals is not None
     # Should select 5, 10, 20, but stop at 50 since 50 > 20 * 1.5 = 30
-    # Reference after min: after first (5), reference=5, then 10/5=2 >1.5? 2>1.5 yes, but wait
-    # After min_duration (after first slot), reference=5, then next 10, 10/5=2 >1.5, so should stop after first?
+    # Reference after min: first slot is 5, then 10/5=2 > 1.5.
+    # That means it should stop after the first slot.
     # But that can't be, because tolerance is 50%, 2>1.5 yes.
     # But in test, perhaps adjust.
 
