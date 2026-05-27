@@ -63,6 +63,43 @@ async def test_binary_sensor_setup(hass):
     assert state.state == "unknown"  # Unavailable because no market data yet
 
 
+async def test_binary_sensor_logs_actionable_error_for_sensor_without_data(
+    hass, caplog
+):
+    """Test selected source sensors without price data get an actionable error."""
+    hass.states.async_set(
+        "sensor.epex_spot_data_price",
+        "0.12",
+        {"price_per_kwh": 0.12},
+    )
+
+    config_entry = MockConfigEntry(
+        domain="epex_spot_sensor",
+        title="Cheap Power 1h",
+        options={
+            CONF_ENTITY_ID: "sensor.epex_spot_data_price",
+            CONF_EARLIEST_START_TIME: "00:00:00",
+            CONF_LATEST_END_TIME: "23:59:59",
+            CONF_DURATION: {"hours": 1},
+            CONF_INTERVAL_MODE: IntervalModes.CONTIGUOUS.value,
+            CONF_PRICE_MODE: PriceModes.CHEAPEST.value,
+        },
+    )
+    config_entry.add_to_hass(hass)
+
+    await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert (
+        'Invalid price sensor "sensor.epex_spot_data_price" selected for EPEX '
+        'Spot Sensor "Cheap Power 1h": "sensor attributes must contain a '
+        "'data' list with start_time, end_time, and price_per_kwh entries; "
+        "select an EPEX Spot Market Price or Total Price sensor, for example "
+        "sensor.epex_spot_data_market_price or "
+        'sensor.epex_spot_data_total_price"'
+    ) in caplog.text
+
+
 async def test_binary_sensor_update_state(hass, freezer):
     """Test sensor state update with market data."""
     now = dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0)
